@@ -55,13 +55,14 @@ void cd_command(char *path) {
 
 void umask_command(char *mask) {
 	int old_mask;
-	int mascara = strtol(mask, NULL, 8);
+	long mascara;
 	if(mask == NULL){
 		old_mask = umask(0);
 		umask(old_mask);
 		fprintf(stdout, "%o\n", old_mask);
 	} else {
-		if(mascara > 777){perror("Argumento invalido");}
+		mascara = strtol(mask, NULL, 8);
+		if(mascara > 0777){perror("Argumento invalido");}
 		else{old_mask = umask(mascara); fprintf(stdout, "%o\n", old_mask);}
 	}
 }
@@ -164,17 +165,21 @@ int esInterno(char **argv){
 }
 
 void ejecutarInterno(char **argv){
+	int count = 0;
+	while (argv[count] != NULL) {
+		count++;
+	}
 	if (strcmp(argv[0], "cd") == 0) {
-		if(argv[2]){perror("Num de argumentos erroneo\n");}
+		if(count > 2){perror("Num de argumentos erroneo\n");}
 		else{cd_command(argv[1]);}
 	} else if (strcmp(argv[0], "umask") == 0) {
-		if(argv[2]){perror("Num de argumentos erroneo\n");}
+		if(count > 2){perror("Num de argumentos erroneo\n");}
 		else{umask_command(argv[1]);}
 	} else if (strcmp(argv[0], "limit") == 0) {
-		if(argv[4]){perror("Num de argumentos erroneo\n");}
+		if(count > 3){perror("Num de argumentos erroneo\n");}
 		else{limit_command(argv[1], argv[2]);}
 	} else if (strcmp(argv[0], "set") == 0) {
-		if(argv[4]){perror("Num de argumentos erroneo\n");}
+		if(count > 3){perror("Num de argumentos erroneo\n");}
 		else{set_command(argv[1], argv[2]);}
 	} else if (strcmp(argv[0], "exit") == 0){
 		exit(0);
@@ -273,7 +278,7 @@ int main(void) {
 						if(redireccionFicherosEntrada(filev[0]) >=0 && redireccionFicherosSalida(filev[1]) >=0 && redireccionFicherosErr(filev[2]) >= 0){ /*Si hay algun tipo de redireccion*/
 							
 							/*Si es interno*/
-							if(esInterno(argv)){ ejecutarInterno(argv);} 
+							if(esInterno(argv)){ejecutarInterno(argv);} 
 							else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
 							else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
 							else { /*No es interno*/
@@ -351,7 +356,6 @@ int main(void) {
 									}
 								
 								} else if(pid[i] > 0){ /*Seccion del padre*/
-									waitpid(pid[i], &status, 0);
 									dup2(entrada, 0);
 									close(entrada);
 								}
