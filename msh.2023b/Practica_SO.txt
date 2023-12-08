@@ -1,0 +1,27 @@
+Para los mandatos de segundo plano y primer plano si hace falta fork.
+obtain_order devuelve en &argvv los comando usados, en &bg si el user usa background y en filev si es stdin, stdout, file...
+Si se quiere redigir la salida a un archivo hay que cambiar la salida estandar del hijo, que apunta a la salida estandar del padre
+A | B | C >& err, Las salidas de error de los mandatos A, B, C, deberan ser redirigidos a err, pero la salia estandar es solo la de C.
+EL minishell espera a la terminacion del ultimo mandato(En este caso seria el C).
+Si se lanza un mandato en segundo plano, no hay que hacer wait.
+En una secuencia el objeticvo del shell, es que la entrada del primer mandato es la entrada del shell, la salida del primer mandato es la entrada del segundo mandato, asi hasta el ultimo donde la salida estandar es la salida del shell. La salida estandar error de los mandatos es la del shell.
+Ejemplo: A | B | C | D
+	fork	4 veces
+	pipe	3 veces
+	dup	3 veces		{
+				{ Se puede ahorrar hacer dup y close con dup2
+	close	3*2 veces	{
+	exec	4 veces
+	
+	Primero el padre hace pipe, luego fork y el hijo hereda el pipe del padre. El padre redirige su entrada al pipe(dup2) y cierra la salida(close) y el hijo redirige su salida al pipe(dup2) y cierra la entrada (close).
+	ESTO LO HACES TANTAS VECES COMO MANDATOS TIENES!!!
+	EL ULTIMO ES LA EXCEPCION, NO NECESITA UN PIPE
+	OJO!!! EL MANDATO 1 NO NECESITA DUP2 DE SU ENTRADA Y EL ULTIMO MANDATO NO NECESITA DUP2 DE SU SALIDA ESTANDAR!!!!
+	
+MANDATOS INTERNOS:
+No hace fork ni exec!!
+Si un mandato interno esta en una secuencia y no es el ultimo si hay que hacer un fork y sin exec!!
+Si se ha dado lo anterior pero el mandato es el ultimo de la secuencia no se hace fork ni exec!!!
+SI esta en segundo plano el mandato hay que hacer un fork, pero sin exec!!!
+
+
