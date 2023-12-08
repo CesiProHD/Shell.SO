@@ -55,13 +55,15 @@ void cd_command(char *path) {
 
 void umask_command(char *mask) {
 	int old_mask;
+	int mascara = strtol(mask, NULL, 8);
 	if(mask == NULL){
 		old_mask = umask(0);
 		umask(old_mask);
+		fprintf(stdout, "%o\n", old_mask);
 	} else {
-		old_mask = umask(strtol(mask, NULL, 8));
+		if(mascara > 777){perror("Argumento invalido");}
+		else{old_mask = umask(mascara); fprintf(stdout, "%o\n", old_mask);}
 	}
-	fprintf(stdout, "%o\n", old_mask);
 }
 
 void getrlimit_resource(const char *resource, struct rlimit *rlimit) {
@@ -169,10 +171,10 @@ void ejecutarInterno(char **argv){
 		if(argv[2]){perror("Num de argumentos erroneo\n");}
 		else{umask_command(argv[1]);}
 	} else if (strcmp(argv[0], "limit") == 0) {
-		if(argv[3]){perror("Num de argumentos erroneo\n");}
+		if(argv[4]){perror("Num de argumentos erroneo\n");}
 		else{limit_command(argv[1], argv[2]);}
 	} else if (strcmp(argv[0], "set") == 0) {
-		if(argv[3]){perror("Num de argumentos erroneo\n");}
+		if(argv[4]){perror("Num de argumentos erroneo\n");}
 		else{set_command(argv[1], argv[2]);}
 	} else if (strcmp(argv[0], "exit") == 0){
 		exit(0);
