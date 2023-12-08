@@ -37,13 +37,7 @@ extern int obtain_order();		/* See parser.y for description */
 void cd_command(char *path) {
 	
     if (path == NULL) {
-		/*if(fdE != 0){
-			printf("%d\n", fdE);
-			if((n = read(fdE, path, MAX_PATH_LENGTH-1)) == -1){printf("%d\n", n); perror("read"); exit(1);}
-		}
-		else {*/
-			path = getenv("HOME");
-		/*}*/
+		path = getenv("HOME");
     }
     if (chdir(path) == 0) {
         char cwd[MAX_PATH_LENGTH];
@@ -61,8 +55,12 @@ void cd_command(char *path) {
 
 void umask_command(char *mask) {
 	int old_mask;
-	/*Segmentation fault, intante acceder a mask que es NULL*/
-	old_mask = umask(strtol(mask, NULL, 8));
+	if(mask == NULL){
+		old_mask = umask(0);
+		umask(old_mask);
+	} else {
+		old_mask = umask(strtol(mask, NULL, 8));
+	}
 	fprintf(stdout, "%o\n", old_mask);
 }
 
@@ -107,17 +105,13 @@ void print_environment_var(char *var) {
     char *env_value = getenv(var);
     if (env_value != NULL) {
 		fprintf(stdout, "%s=%s\n", var, env_value);
-    }
+	}
 }
 
 void set_environment_var(char *var, char *value) {
-
     strcat(var, "=");
     strcat(var, value);
-
-    if (putenv(var) != 0) {
-        perror("putenv");
-    }
+    if (putenv(var) != 0) {perror("putenv");}
 }
 
 void limit_command(char *resource, char *limit) {
@@ -153,14 +147,8 @@ void limit_command(char *resource, char *limit) {
 }
 
 void set_command(char *var, char *value) {
-	if (value == NULL) {
-		if(read(STDIN_FILENO, value, 100) == -1){perror("read"); exit(1);}
-		else{print_environment_var(var);}
-	} 
-    if (var == NULL) {
-		if(read(STDIN_FILENO, var, 100) == -1){perror("read"); exit(1);}
-		else{print_environment();}
-	} 
+	if (value == NULL && var == NULL) {print_environment();} 
+    if (var != NULL && value == NULL) {print_environment_var(var);} 
 	else if (var != NULL && value != NULL){set_environment_var(var, value);}
 }
 
@@ -175,25 +163,17 @@ int esInterno(char **argv){
 
 void ejecutarInterno(char **argv){
 	if (strcmp(argv[0], "cd") == 0) {
-		if(argv[2] != NULL){perror("Num de argumentos erroneo\n");}
-		else{
-			cd_command(argv[1]);
-		}
+		if(argv[2]){perror("Num de argumentos erroneo\n");}
+		else{cd_command(argv[1]);}
 	} else if (strcmp(argv[0], "umask") == 0) {
-		if(argv[2] != NULL){perror("Num de argumentos erroneo\n");}
-		else{
-			umask_command(argv[1]);
-		}
+		if(argv[2]){perror("Num de argumentos erroneo\n");}
+		else{umask_command(argv[1]);}
 	} else if (strcmp(argv[0], "limit") == 0) {
-		if(argv[3] != NULL){perror("Num de argumentos erroneo\n");}
-		else{
-			limit_command(argv[1], argv[2]);
-		}
+		if(argv[3]){perror("Num de argumentos erroneo\n");}
+		else{limit_command(argv[1], argv[2]);}
 	} else if (strcmp(argv[0], "set") == 0) {
-		if(argv[3] != NULL){perror("Num de argumentos erroneo\n");}
-		else{
-			set_command(argv[1], argv[2]);
-		}
+		if(argv[3]){perror("Num de argumentos erroneo\n");}
+		else{set_command(argv[1], argv[2]);}
 	} else if (strcmp(argv[0], "exit") == 0){
 		exit(0);
 	}
@@ -245,6 +225,7 @@ int main(void) {
 	int fd[2];
 	struct sigaction sa;
 	pid_t *pid;
+	pid_t bgpid;
 	
 	setbuf(stdout, NULL);			/* Unbuffered */
 	setbuf(stdin, NULL);
@@ -284,12 +265,15 @@ int main(void) {
 					/*Gestion del hijo*/
 					else if(pid[0] == 0){
 
+						bgpid = pid[0];
+
 						/*Posible redireccion*/
 						if(redireccionFicherosEntrada(filev[0]) >=0 && redireccionFicherosSalida(filev[1]) >=0 && redireccionFicherosErr(filev[2]) >= 0){ /*Si hay algun tipo de redireccion*/
 							
 							/*Si es interno*/
 							if(esInterno(argv)){ ejecutarInterno(argv);} 
-
+							else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
+							else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
 							else { /*No es interno*/
 								execvp(argv[0], argv);
 								perror("exec");
@@ -333,6 +317,9 @@ int main(void) {
 								
 							}
 
+							else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
+							else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
+
 							else { /*Si no es interno*/
 
 								pid[i] = fork(); /*Creacion del hijo*/
@@ -341,6 +328,8 @@ int main(void) {
 
 								/*Gestion del hijo*/
 								else if(pid[i] == 0){
+
+									bgpid = pid[i];
 
 									/*Activar interrupciones de las señales*/
 									sa.sa_handler = SIG_DFL;
@@ -391,7 +380,8 @@ int main(void) {
 									if(redireccionFicherosEntrada(filev[0]) >= 0){
 
 										if(esInterno(argv)){ejecutarInterno(argv);} /*Si es interno*/
-
+										else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
+										else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
 										else{ /*No es interno*/
 											execvp(argv[0], argv);
 											perror("fork");
@@ -405,7 +395,8 @@ int main(void) {
 								} else { /*Resto de hijos salvo el primero y el ultimo*/
 
 									if(esInterno(argv)){ejecutarInterno(argv);} /*Si es interno*/
-
+									else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
+									else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
 									else{ /*No es interno*/
 										execvp(argv[0], argv);
 										perror("exec");
@@ -450,7 +441,8 @@ int main(void) {
 						close(error);
 						
 					}
-
+					else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
+					else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
 					else{ /*No es inteno*/
 
 						pid[0] = fork(); /*Creacion de hijo*/
@@ -514,7 +506,8 @@ int main(void) {
 								close(error);
 								
 							}
-
+							else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
+							else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
 							else { /*Si no es interno*/
 
 								pid[i] = fork(); /*Creacion del hijo*/
@@ -573,7 +566,8 @@ int main(void) {
 									if(redireccionFicherosEntrada(filev[0]) >= 0){
 
 										if(esInterno(argv)){ejecutarInterno(argv);} /*Si es interno*/
-
+										else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
+										else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
 										else{ /*No es interno*/
 											execvp(argv[0], argv);
 											perror("fork");
@@ -587,7 +581,8 @@ int main(void) {
 								} else { /*Resto de hijos salvo el primero y el ultimo*/
 
 									if(esInterno(argv)){ejecutarInterno(argv);} /*Si es interno*/
-
+									else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
+									else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
 									else{ /*No es interno*/
 										execvp(argv[0], argv);
 										perror("exec");
