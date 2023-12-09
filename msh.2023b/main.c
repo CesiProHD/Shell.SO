@@ -55,14 +55,14 @@ void cd_command(char *path) {
 
 void umask_command(char *mask) {
 	int old_mask;
-	long mascara;
 	if(mask == NULL){
 		old_mask = umask(0);
 		umask(old_mask);
-		fprintf(stdout, "%o\n", old_mask);
 	} else {
-		mascara = strtol(mask, NULL, 8);
-		if(mascara > 0777){perror("Argumento invalido");}
+		long mascara;
+		char *p;
+		mascara = strtol(mask, &p, 8);
+		if(*p != '\0'){perror("Argumento invalido");}
 		else{old_mask = umask(mascara); fprintf(stdout, "%o\n", old_mask);}
 	}
 }
