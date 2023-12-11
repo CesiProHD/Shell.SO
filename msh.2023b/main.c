@@ -116,8 +116,8 @@ void limit_command(char *resource, char *limit){
 	int recurso;
 	struct rlimit rlimit;
 	if(resource != NULL){
-		recurso = getrlimit_resource(resource);
-		switch(recurso){
+		if((recurso = getrlimit_resource(resource))){
+			switch(recurso){
 			case 1:
 				if(getrlimit(RLIMIT_CPU, &rlimit) == -1){perror("getrlimit");}
 				if(limit != NULL){
@@ -172,6 +172,7 @@ void limit_command(char *resource, char *limit){
 					fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);
 				}
 				break;
+			}
 		}
 	} else {
 		print_all_limits();
@@ -191,23 +192,26 @@ void print_environment_var(char *var) {
 
 void set_environment_var(char *var, char **value, int count) {
 	int i = 2;
-	char *env;
-	env = malloc((count+1)*sizeof(char));
-	strcpy(env, var);
+	char *env = malloc(1000);
+	if(env == NULL){
+		perror("malloc");
+		exit(1);
+	}
+	strcat(env, var);
 	strcat(env, "=");
 	while(value[i] != NULL){
 		strcat(env, value[i]);
 		i++;
 	}
-    if (putenv(var) != 0) {perror("putenv"); exit(1);}
+    if (putenv(env) != 0) {perror("putenv"); free(env); exit(1);}
 	free(env);
 }
 
 
 void set_command(char *var, char **value, int count) {
 	if (var == NULL) {print_environment();} 
-    if (var != NULL && count == 2){print_environment_var(var);} 
-	else if (var != NULL && count > 2){set_environment_var(var, value, count);}
+    if (var != NULL && count == 1){print_environment_var(var);} 
+	else if (var != NULL && count > 1){set_environment_var(var, value, count);}
 	else{perror("Llamada invalida");}
 }
 
@@ -222,17 +226,17 @@ int esInterno(char **argv){
 
 void ejecutarInterno(char **argv){
 	int count = 0;
-	while (argv[count] != NULL) {
+	while (argv[count+1] != NULL) {
 		count++;
 	}
 	if (strcmp(argv[0], "cd") == 0) {
-		if(count > 2){perror("Num de argumentos erroneo\n");}
+		if(count > 1){perror("Num de argumentos erroneo\n");}
 		else{cd_command(argv[1]);}
 	} else if (strcmp(argv[0], "umask") == 0) {
-		if(count > 2){perror("Num de argumentos erroneo\n");}
+		if(count > 1){perror("Num de argumentos erroneo\n");}
 		else{umask_command(argv[1]);}
 	} else if (strcmp(argv[0], "limit") == 0) {
-		if(count > 3){perror("Num de argumentos erroneo\n");}
+		if(count > 2){perror("Num de argumentos erroneo\n");}
 		else{limit_command(argv[1], argv[2]);}
 	} else if (strcmp(argv[0], "set") == 0) {
 		set_command(argv[1], argv, count);
