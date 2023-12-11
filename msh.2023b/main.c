@@ -44,20 +44,21 @@ void cd_command(char *path) {
 		getcwd(cwd, sizeof(cwd));
         if (cwd == NULL) {
             perror("getcwd");
+			exit(1);
         } else {
 			fprintf(stdout, "%s\n", cwd);
         }
     } else {
         perror("chdir");
     }
-	return;
 }
 
 void umask_command(char *mask) {
-	int old_mask;
+	mode_t old_mask;
 	if(mask == NULL){
 		old_mask = umask(0);
 		umask(old_mask);
+		fprintf(stdout, "%o\n", old_mask);
 	} else {
 		long mascara;
 		char *p;
@@ -67,22 +68,27 @@ void umask_command(char *mask) {
 	}
 }
 
-void getrlimit_resource(const char *resource, struct rlimit *rlimit) {
+int getrlimit_resource(const char *resource, struct rlimit *rlimit) {
     if (strcmp(resource, "cpu") == 0) {
         getrlimit(RLIMIT_CPU, rlimit);
+		return 1;
     } else if (strcmp(resource, "fsize") == 0) {
         getrlimit(RLIMIT_FSIZE, rlimit);
+		return 1;
     } else if (strcmp(resource, "data") == 0) {
         getrlimit(RLIMIT_DATA, rlimit);
+		return 1;
     } else if (strcmp(resource, "stack") == 0) {
         getrlimit(RLIMIT_STACK, rlimit);
+		return 1;
     } else if (strcmp(resource, "core") == 0) {
         getrlimit(RLIMIT_CORE, rlimit);
+		return 1;
     } else if (strcmp(resource, "nofile") == 0) {
         getrlimit(RLIMIT_NOFILE, rlimit);
-    } else {
-        fprintf(stderr, "Recurso no valido\n");
-    }
+		return 1;
+    } else {perror("Recurso no valido\n");}
+	return 0;
 }
 
 void print_all_limits() {
@@ -90,31 +96,28 @@ void print_all_limits() {
     struct rlimit rlimit;
 	long unsigned i;
     for ( i = 0; i < sizeof(resources)/sizeof(resources[0]); i++) {
-		getrlimit_resource(resources[i], &rlimit);
-		fprintf(stdout, "%s\t%d\n", resources[i], (int)rlimit.rlim_cur);
+		if(getrlimit_resource(resources[i], &rlimit) == 1){
+			fprintf(stdout, "%s\t%d\n", resources[i], (int)rlimit.rlim_cur);
+		}
     }
 }
 
 void print_environment() {
 	extern char **environ;
 	char **env;
-    for (env = environ; *env != NULL; env++) {
-		fprintf(stdout, "%s\n", *env);
-    }
+    for (env = environ; *env != NULL; env++) {fprintf(stdout, "%s\n", *env);}
 } 
 
 
 void print_environment_var(char *var) {
     char *env_value = getenv(var);
-    if (env_value != NULL) {
-		fprintf(stdout, "%s=%s\n", var, env_value);
-	}
+    if (env_value != NULL) {fprintf(stdout, "%s=%s\n", var, env_value);}
 }
 
 void set_environment_var(char *var, char *value) {
     strcat(var, "=");
     strcat(var, value);
-    if (putenv(var) != 0) {perror("putenv");}
+    if (putenv(var) != 0) {perror("putenv"); exit(1);}
 }
 
 void limit_command(char *resource, char *limit) {
@@ -140,12 +143,10 @@ void limit_command(char *resource, char *limit) {
 			rlimit.rlim_max = resource_limit;
 			setrlimit(RLIMIT_NOFILE, &rlimit);
 		} else {
-			fprintf(stderr, "Recurso no valido.\n");
-			return;
+			perror("Recurso no valido.\n");
 		}
     } else if (resource != NULL && limit == NULL) {
-		getrlimit_resource(resource, &rlimit);
-		fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);
+		if(getrlimit_resource(resource, &rlimit) == 1){fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
 	} else if(resource == NULL){print_all_limits();}
 }
 
@@ -184,13 +185,12 @@ void ejecutarInterno(char **argv){
 	} else if (strcmp(argv[0], "exit") == 0){
 		exit(0);
 	}
-	return;
 }
 
 int redireccionFicherosSalida(const char *filev){
 	int fd = 0;
-	if(filev != NULL){
-		if((fd = open(filev, O_WRONLY|O_CREAT|O_TRUNC, 0660)) == -1){exit(-1);}
+	if(filev){
+		if((fd = open(filev, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1){return fd;}
 		else{
 			dup2(fd, 1);
 			close(fd);
@@ -201,8 +201,8 @@ int redireccionFicherosSalida(const char *filev){
 
 int redireccionFicherosEntrada(const char *filev){
 	int fd = 0;
-	if(filev != NULL){
-		if((fd = open(filev, O_RDONLY)) == -1){exit(-1);}
+	if(filev){
+		if((fd = open(filev, O_RDONLY)) == -1){return fd;}
 		else{
 			dup2(fd, 0);
 			close(fd);
@@ -213,8 +213,8 @@ int redireccionFicherosEntrada(const char *filev){
 
 int redireccionFicherosErr(const char *filev){
 	int fd = 0;
-	if(filev != NULL){
-		if((fd = open(filev, O_WRONLY|O_CREAT|O_TRUNC, 0660)) == -1){exit(-1);}
+	if(filev){
+		if((fd = open(filev, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1){return fd;}
 		else{
 			dup2(fd, 2);
 			close(fd);
@@ -231,8 +231,7 @@ int main(void) {
 	int i, status, ret, bg, entrada, salida, error;
 	int fd[2];
 	struct sigaction sa;
-	pid_t *pid;
-	pid_t bgpid;
+	pid_t pid;
 	
 	setbuf(stdout, NULL);			/* Unbuffered */
 	setbuf(stdin, NULL);
@@ -241,9 +240,7 @@ int main(void) {
 	sa.sa_flags = 0;
 	sigaction(2, &sa, NULL);
 	sigaction(3, &sa, NULL);
-
-	status = 0;
-
+	
 	while (1) {
 		fprintf(stderr, "%s", "msh> ");	/* Prompt */
 		ret = obtain_order(&argvv, filev, &bg);
@@ -257,7 +254,6 @@ int main(void) {
  * PARA DAR UNA IDEA DE COMO UTILIZAR LAS ESTRUCTURAS
  * argvv Y filev. ESTAS LINEAS DEBERAN SER ELIMINADAS.
  */      	
-			pid = malloc(argvc*sizeof(pid_t));
 
 			if(bg){ /*Si es background*/
 
@@ -265,22 +261,18 @@ int main(void) {
 
 					argv = argvv[0]; /*Obtencion de mandato*/
 
-					pid[0] = fork(); /*Creacion de hijo*/
+					pid = fork(); /*Creacion de hijo*/
 
-					if(pid[0] == -1){perror("fork"); exit(1);} /*Error en la creacion del hijo*/
+					if(pid == -1){perror("fork"); exit(1);} /*Error en la creacion del hijo*/
 
 					/*Gestion del hijo*/
-					else if(pid[0] == 0){
-
-						bgpid = pid[0];
+					else if(pid == 0){
 
 						/*Posible redireccion*/
 						if(redireccionFicherosEntrada(filev[0]) >=0 && redireccionFicherosSalida(filev[1]) >=0 && redireccionFicherosErr(filev[2]) >= 0){ /*Si hay algun tipo de redireccion*/
 							
 							/*Si es interno*/
-							if(esInterno(argv)){ejecutarInterno(argv);} 
-							else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
-							else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
+							if(esInterno(argv)){ejecutarInterno(argv); exit(0);} 
 							else { /*No es interno*/
 								execvp(argv[0], argv);
 								perror("exec");
@@ -306,7 +298,7 @@ int main(void) {
 								error = dup(2);
 
 								/*Redireccion de un mandato interno y ultimo de una secuencia*/
-								if(redireccionFicherosEntrada(filev[0]) >= 0 && redireccionFicherosSalida(filev[1]) >= 0 && redireccionFicherosErr(filev[2]) >= 0){
+								if(redireccionFicherosSalida(filev[1]) >= 0 && redireccionFicherosErr(filev[2]) >= 0){
 									ejecutarInterno(argv);
 									if(filev[1]){dup2(salida, 1);}
 									if(filev[0]){dup2(entrada, 0);}
@@ -324,19 +316,14 @@ int main(void) {
 								
 							}
 
-							else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
-							else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
-
 							else { /*Si no es interno*/
 
-								pid[i] = fork(); /*Creacion del hijo*/
+								pid = fork(); /*Creacion del hijo*/
 
-								if(pid[i] == -1){perror("fork"); exit(1);} /*Error en creacion del hijo*/
+								if(pid == -1){perror("fork"); exit(1);} /*Error en creacion del hijo*/
 
 								/*Gestion del hijo*/
-								else if(pid[i] == 0){
-
-									bgpid = pid[i];
+								else if(pid == 0){
 
 									/*Activar interrupciones de las señales*/
 									sa.sa_handler = SIG_DFL;
@@ -355,7 +342,7 @@ int main(void) {
 										exit(1);
 									}
 								
-								} else if(pid[i] > 0){ /*Seccion del padre*/
+								} else if(pid > 0){ /*Seccion del padre*/
 									dup2(entrada, 0);
 									close(entrada);
 								}
@@ -365,9 +352,9 @@ int main(void) {
 						/*Creacion del pipe*/
 						if(pipe(fd) == -1){perror("pipe"); exit(1);}
 
-							pid[i] = fork();
-							if(pid[i] == -1){perror("fork"); exit(1);}
-							else if(pid[i] == 0){
+							pid = fork();
+							if(pid == -1){perror("fork"); exit(1);}
+							else if(pid == 0){
 
 								/*Activacion de señales*/
 								sa.sa_handler = SIG_DFL;
@@ -385,9 +372,7 @@ int main(void) {
 									/*Si tiene redireccion de entrada o si no*/
 									if(redireccionFicherosEntrada(filev[0]) >= 0){
 
-										if(esInterno(argv)){ejecutarInterno(argv);} /*Si es interno*/
-										else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
-										else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
+										if(esInterno(argv)){ejecutarInterno(argv); exit(0);} /*Si es interno*/
 										else{ /*No es interno*/
 											execvp(argv[0], argv);
 											perror("fork");
@@ -400,16 +385,14 @@ int main(void) {
 									}
 								} else { /*Resto de hijos salvo el primero y el ultimo*/
 
-									if(esInterno(argv)){ejecutarInterno(argv);} /*Si es interno*/
-									else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
-									else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
+									if(esInterno(argv)){ejecutarInterno(argv); exit(0);} /*Si es interno*/
 									else{ /*No es interno*/
 										execvp(argv[0], argv);
 										perror("exec");
 										exit(1);
 									}
 								}	
-							} else if(pid[0] > 0){
+							} else if(pid > 0){
 								dup2(fd[0], 0);
 								close(fd[0]);
 								close(fd[1]);
@@ -447,16 +430,14 @@ int main(void) {
 						close(error);
 						
 					}
-					else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
-					else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
 					else{ /*No es inteno*/
 
-						pid[0] = fork(); /*Creacion de hijo*/
+						pid = fork(); /*Creacion de hijo*/
 
-						if(pid[0] == -1){perror("fork");} /*Comprobacion error en creacion de hijo*/
+						if(pid == -1){perror("fork");} /*Comprobacion error en creacion de hijo*/
 
 						/*Gestion del hijo*/
-						else if(pid[0] == 0){
+						else if(pid == 0){
 
 							/*Activacion señales*/
 							sa.sa_handler = SIG_DFL;
@@ -476,8 +457,8 @@ int main(void) {
 							}
 
 						/*Gestion del padre*/	
-						} else if(pid[0] > 0){
-							waitpid(pid[0], &status, 0);
+						} else if(pid > 0){
+							waitpid(pid, &status, 0);
 						}
 					}
 				} else if(argvc > 1) { /*Mas de un argumento*/
@@ -495,10 +476,9 @@ int main(void) {
 								error = dup(2);
 
 								/*Redireccion de un mandato interno y ultimo de una secuencia*/
-								if(redireccionFicherosEntrada(filev[0]) >= 0 && redireccionFicherosSalida(filev[1]) >= 0 && redireccionFicherosErr(filev[2]) >= 0){
+								if(redireccionFicherosSalida(filev[1]) >= 0 && redireccionFicherosErr(filev[2]) >= 0){
 									ejecutarInterno(argv);
 									if(filev[1]){dup2(salida, 1);}
-									if(filev[0]){dup2(entrada, 0);}
 									if(filev[2]){dup2(error, 2);}
 
 								/*Error redireccion ficheros*/	
@@ -506,22 +486,20 @@ int main(void) {
 									perror("open");
 									exit(1);
 								}
-
+								
+								dup2(entrada, 0);
 								close(salida);
 								close(entrada);
 								close(error);
 								
-							}
-							else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
-							else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
-							else { /*Si no es interno*/
+							} else { /*Si no es interno*/
 
-								pid[i] = fork(); /*Creacion del hijo*/
+								pid = fork(); /*Creacion del hijo*/
 
-								if(pid[i] == -1){perror("fork"); exit(1);} /*Error en creacion del hijo*/
+								if(pid == -1){perror("fork"); exit(1);} /*Error en creacion del hijo*/
 
 								/*Gestion del hijo*/
-								else if(pid[i] == 0){
+								else if(pid == 0){
 
 									/*Activar interrupciones de las señales*/
 									sa.sa_handler = SIG_DFL;
@@ -530,7 +508,7 @@ int main(void) {
 									sigaction(3, &sa, NULL);
 								
 									/*Comprobar si hay redireccion de salida*/
-									if(redireccionFicherosSalida(filev[1]) >= 0){
+									if(redireccionFicherosSalida(filev[1]) >= 0 && redireccionFicherosErr(filev[2]) >= 0){
 										execvp(argv[0], argv);
 										perror("exec");
 										exit(1);
@@ -540,8 +518,8 @@ int main(void) {
 										exit(1);
 									}
 								
-								} else if(pid[i] > 0){ /*Seccion del padre*/
-									waitpid(pid[i], &status, 0);
+								} else { /*Seccion del padre*/
+									waitpid(pid, &status, 0);
 									dup2(entrada, 0);
 									close(entrada);
 								}
@@ -551,9 +529,9 @@ int main(void) {
 						/*Creacion del pipe*/
 						if(pipe(fd) == -1){perror("pipe"); exit(1);}
 
-							pid[i] = fork();
-							if(pid[i] == -1){perror("fork"); exit(1);}
-							else if(pid[i] == 0){
+							pid = fork();
+							if(pid == -1){perror("fork"); exit(1);}
+							else if(pid == 0){
 
 								/*Activacion de señales*/
 								sa.sa_handler = SIG_DFL;
@@ -571,9 +549,7 @@ int main(void) {
 									/*Si tiene redireccion de entrada o si no*/
 									if(redireccionFicherosEntrada(filev[0]) >= 0){
 
-										if(esInterno(argv)){ejecutarInterno(argv);} /*Si es interno*/
-										else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
-										else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
+										if(esInterno(argv)){ejecutarInterno(argv); exit(0);} /*Si es interno*/
 										else{ /*No es interno*/
 											execvp(argv[0], argv);
 											perror("fork");
@@ -586,16 +562,14 @@ int main(void) {
 									}
 								} else { /*Resto de hijos salvo el primero y el ultimo*/
 
-									if(esInterno(argv)){ejecutarInterno(argv);} /*Si es interno*/
-									else if(strcmp(argv[0], "status") == 0){fprintf(stdout, "%d\n", status);}
-									else if(strcmp(argv[0], "bgpid") == 0){fprintf(stdout, "%d\n", bgpid);}
+									if(esInterno(argv)){ejecutarInterno(argv); exit(0);} /*Si es interno*/
 									else{ /*No es interno*/
 										execvp(argv[0], argv);
 										perror("exec");
 										exit(1);
 									}
 								}	
-							} else if(pid[0] > 0){
+							} else {
 								dup2(fd[0], 0);
 								close(fd[0]);
 								close(fd[1]);
@@ -604,7 +578,6 @@ int main(void) {
 					}
 				}
 			}
-			free(pid); /*Liberacion de espacio*/
 /*
  * FIN DE LA PARTE A ELIMINAR
  */
