@@ -119,63 +119,57 @@ void limit_command(char *resource, char *limit){
 		recurso = getrlimit_resource(resource);
 		switch(recurso){
 			case 1:
+				if(getrlimit(RLIMIT_CPU, &rlimit) == -1){perror("getrlimit");}
 				if(limit != NULL){
 					rlimit.rlim_cur = atol(limit);
-					setrlimit(RLIMIT_CPU, &rlimit);
-				}
-				else{
-					if(getrlimit(RLIMIT_CPU, &rlimit) == -1){perror("getrlimit");}
-					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+					if(setrlimit(RLIMIT_CPU, &rlimit) == -1){perror("setrlimit");}
+				} else{
+					fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);
 				}
 				break;
 			case 2:
+				if(getrlimit(RLIMIT_FSIZE, &rlimit) == -1){perror("getrlimit");}
 				if(limit != NULL){
 					rlimit.rlim_cur = atol(limit);
-					setrlimit(RLIMIT_FSIZE, &rlimit);
-				}
-				else{
-					if(getrlimit(RLIMIT_FSIZE, &rlimit) == -1){perror("getrlimit");}
-					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+					if(setrlimit(RLIMIT_FSIZE, &rlimit) == -1){perror("setrlimit");}
+				} else{
+					fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);
 				}
 				break;
 			case 3:
+				if(getrlimit(RLIMIT_DATA, &rlimit) == -1){perror("getrlimit");}
 				if(limit != NULL){
 					rlimit.rlim_cur = atol(limit);
-					setrlimit(RLIMIT_DATA, &rlimit);
-				}
-				else{
-					if(getrlimit(RLIMIT_DATA, &rlimit) == -1){perror("getrlimit");}
-					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+					if(setrlimit(RLIMIT_DATA, &rlimit) == -1){perror("setrlimit");}
+				} else{
+					fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);
 				}
 				break; 
 			case 4:
+				if(getrlimit(RLIMIT_STACK, &rlimit) == -1){perror("getrlimit");}
 				if(limit != NULL){
 					rlimit.rlim_cur = atol(limit);
-					setrlimit(RLIMIT_STACK, &rlimit);
-				}
-				else{
-					if(getrlimit(RLIMIT_STACK, &rlimit) == -1){perror("getrlimit");}
-					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+					if(setrlimit(RLIMIT_STACK, &rlimit) == -1){perror("setrlimit");}
+				} else{
+					fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);
 				}
 				break; 
 			case 5:
+				if(getrlimit(RLIMIT_CORE, &rlimit) == -1){perror("getrlimit");}
 				if(limit != NULL){
 					rlimit.rlim_cur = atol(limit);
-					setrlimit(RLIMIT_CORE, &rlimit);
-				}
-				else{
-					if(getrlimit(RLIMIT_CORE, &rlimit) == -1){perror("getrlimit");}
-					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+					if(setrlimit(RLIMIT_CORE, &rlimit) == -1){perror("setrlimit");}
+				} else{
+					fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);
 				}
 				break;
 			default: 
+				if(getrlimit(RLIMIT_NOFILE, &rlimit) == -1){perror("getrlimit");}
 				if(limit != NULL){
 					rlimit.rlim_cur = atol(limit);
-					setrlimit(RLIMIT_NOFILE, &rlimit);
-				}
-				else{
-					if(getrlimit(RLIMIT_NOFILE, &rlimit) == -1){perror("getrlimit");}
-					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+					if(setrlimit(RLIMIT_NOFILE, &rlimit) == -1){perror("setrlimit");}
+				} else{
+					fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);
 				}
 				break;
 		}
