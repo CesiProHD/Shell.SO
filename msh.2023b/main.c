@@ -68,38 +68,120 @@ void umask_command(char *mask) {
 	}
 }
 
-int getrlimit_resource(const char *resource, struct rlimit *rlimit) {
-    if (strcmp(resource, "cpu") == 0) {
-        getrlimit(RLIMIT_CPU, rlimit);
-		return 1;
-    } else if (strcmp(resource, "fsize") == 0) {
-        getrlimit(RLIMIT_FSIZE, rlimit);
-		return 1;
-    } else if (strcmp(resource, "data") == 0) {
-        getrlimit(RLIMIT_DATA, rlimit);
-		return 1;
-    } else if (strcmp(resource, "stack") == 0) {
-        getrlimit(RLIMIT_STACK, rlimit);
-		return 1;
-    } else if (strcmp(resource, "core") == 0) {
-        getrlimit(RLIMIT_CORE, rlimit);
-		return 1;
-    } else if (strcmp(resource, "nofile") == 0) {
-        getrlimit(RLIMIT_NOFILE, rlimit);
-		return 1;
-    } else {perror("Recurso no valido\n");}
-	return 0;
+int getrlimit_resource(char *resource){
+	if (strcmp(resource, "cpu") == 0) {return 1;} 
+	else if (strcmp(resource, "fsize") == 0) {return 2;} 
+	else if (strcmp(resource, "data") == 0) {return 3;} 
+	else if (strcmp(resource, "stack") == 0) {return 4;} 
+	else if (strcmp(resource, "core") == 0) {return 5;} 
+	else if (strcmp(resource, "nofile") == 0) {return 6;} 
+	else {perror("Recurso no valido.\n"); return 0;}
 }
 
 void print_all_limits() {
-    const char *resources[] = {"cpu", "fsize", "data", "stack", "core", "nofile"};
+    char *resources[] = {"cpu", "fsize", "data", "stack", "core", "nofile"};
     struct rlimit rlimit;
 	long unsigned i;
-    for ( i = 0; i < sizeof(resources)/sizeof(resources[0]); i++) {
-		if(getrlimit_resource(resources[i], &rlimit) == 1){
-			fprintf(stdout, "%s\t%d\n", resources[i], (int)rlimit.rlim_cur);
-		}
+    for (i = 0; i < sizeof(resources)/sizeof(resources[0]); i++) {
+		switch(i){
+			case 0:
+				if(getrlimit(RLIMIT_CPU, &rlimit) == -1){perror("getrlimit");}
+				else{fprintf(stdout, "%s\t%d\n", resources[i], (int)rlimit.rlim_cur);}
+				break;
+			case 1:
+				if(getrlimit(RLIMIT_FSIZE, &rlimit) == -1){perror("getrlimit");}
+				else{fprintf(stdout, "%s\t%d\n", resources[i], (int)rlimit.rlim_cur);}
+				break;
+			case 2:
+				if(getrlimit(RLIMIT_DATA, &rlimit) == -1){perror("getrlimit");}
+				else{fprintf(stdout, "%s\t%d\n", resources[i], (int)rlimit.rlim_cur);}
+				break;
+			case 3:
+				if(getrlimit(RLIMIT_STACK, &rlimit) == -1){perror("getrlimit");}
+				else{fprintf(stdout, "%s\t%d\n", resources[i], (int)rlimit.rlim_cur);}
+				break;
+			case 4:
+				if(getrlimit(RLIMIT_CORE, &rlimit) == -1){perror("getrlimit");}
+				else{fprintf(stdout, "%s\t%d\n", resources[i], (int)rlimit.rlim_cur);}
+				break;
+			default:
+				if(getrlimit(RLIMIT_NOFILE, &rlimit) == -1){perror("getrlimit");}
+				else{fprintf(stdout, "%s\t%d\n", resources[i], (int)rlimit.rlim_cur);}
+				break;
+		}	
     }
+}
+
+void limit_command(char *resource, char *limit){
+	int recurso;
+	struct rlimit rlimit;
+	if(resource != NULL){
+		recurso = getrlimit_resource(resource);
+		switch(recurso){
+			case 1:
+				if(limit != NULL){
+					rlimit.rlim_cur = atol(limit);
+					setrlimit(RLIMIT_CPU, &rlimit);
+				}
+				else{
+					if(getrlimit(RLIMIT_CPU, &rlimit) == -1){perror("getrlimit");}
+					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+				}
+				break;
+			case 2:
+				if(limit != NULL){
+					rlimit.rlim_cur = atol(limit);
+					setrlimit(RLIMIT_FSIZE, &rlimit);
+				}
+				else{
+					if(getrlimit(RLIMIT_FSIZE, &rlimit) == -1){perror("getrlimit");}
+					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+				}
+				break;
+			case 3:
+				if(limit != NULL){
+					rlimit.rlim_cur = atol(limit);
+					setrlimit(RLIMIT_DATA, &rlimit);
+				}
+				else{
+					if(getrlimit(RLIMIT_DATA, &rlimit) == -1){perror("getrlimit");}
+					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+				}
+				break; 
+			case 4:
+				if(limit != NULL){
+					rlimit.rlim_cur = atol(limit);
+					setrlimit(RLIMIT_STACK, &rlimit);
+				}
+				else{
+					if(getrlimit(RLIMIT_STACK, &rlimit) == -1){perror("getrlimit");}
+					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+				}
+				break; 
+			case 5:
+				if(limit != NULL){
+					rlimit.rlim_cur = atol(limit);
+					setrlimit(RLIMIT_CORE, &rlimit);
+				}
+				else{
+					if(getrlimit(RLIMIT_CORE, &rlimit) == -1){perror("getrlimit");}
+					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+				}
+				break;
+			default: 
+				if(limit != NULL){
+					rlimit.rlim_cur = atol(limit);
+					setrlimit(RLIMIT_NOFILE, &rlimit);
+				}
+				else{
+					if(getrlimit(RLIMIT_NOFILE, &rlimit) == -1){perror("getrlimit");}
+					else{fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
+				}
+				break;
+		}
+	} else {
+		print_all_limits();
+	}
 }
 
 void print_environment() {
@@ -108,52 +190,31 @@ void print_environment() {
     for (env = environ; *env != NULL; env++) {fprintf(stdout, "%s\n", *env);}
 } 
 
-
 void print_environment_var(char *var) {
     char *env_value = getenv(var);
     if (env_value != NULL) {fprintf(stdout, "%s=%s\n", var, env_value);}
 }
 
-void set_environment_var(char *var, char *value) {
-    strcat(var, "=");
-    strcat(var, value);
+void set_environment_var(char *var, char **value, int count) {
+	int i = 2;
+	char *env;
+	env = malloc((count+1)*sizeof(char));
+	strcpy(env, var);
+	strcat(env, "=");
+	while(value[i] != NULL){
+		strcat(env, value[i]);
+		i++;
+	}
     if (putenv(var) != 0) {perror("putenv"); exit(1);}
+	free(env);
 }
 
-void limit_command(char *resource, char *limit) {
-    struct rlimit rlimit;
-    if (limit != NULL && resource != NULL) {
-        rlim_t resource_limit = atol(limit);
-		if (strcmp(resource, "cpu") == 0) {
-			rlimit.rlim_max = resource_limit;
-			setrlimit(RLIMIT_CPU, &rlimit);
-		} else if (strcmp(resource, "fsize") == 0) {
-			rlimit.rlim_max = resource_limit;
-			setrlimit(RLIMIT_FSIZE, &rlimit);
-		} else if (strcmp(resource, "data") == 0) {
-			rlimit.rlim_max = resource_limit;
-			setrlimit(RLIMIT_DATA, &rlimit);
-		} else if (strcmp(resource, "stack") == 0) {
-			rlimit.rlim_max = resource_limit;
-			setrlimit(RLIMIT_STACK, &rlimit);
-		} else if (strcmp(resource, "core") == 0) {
-			rlimit.rlim_max = resource_limit;
-			setrlimit(RLIMIT_CORE, &rlimit);
-		} else if (strcmp(resource, "nofile") == 0) {
-			rlimit.rlim_max = resource_limit;
-			setrlimit(RLIMIT_NOFILE, &rlimit);
-		} else {
-			perror("Recurso no valido.\n");
-		}
-    } else if (resource != NULL && limit == NULL) {
-		if(getrlimit_resource(resource, &rlimit) == 1){fprintf(stdout, "%s\t%d\n", resource, (int)rlimit.rlim_cur);}
-	} else if(resource == NULL){print_all_limits();}
-}
 
-void set_command(char *var, char *value) {
-	if (value == NULL && var == NULL) {print_environment();} 
-    if (var != NULL && value == NULL) {print_environment_var(var);} 
-	else if (var != NULL && value != NULL){set_environment_var(var, value);}
+void set_command(char *var, char **value, int count) {
+	if (var == NULL) {print_environment();} 
+    if (var != NULL && count == 2){print_environment_var(var);} 
+	else if (var != NULL && count > 2){set_environment_var(var, value, count);}
+	else{perror("Llamada invalida");}
 }
 
 int esInterno(char **argv){
@@ -180,8 +241,7 @@ void ejecutarInterno(char **argv){
 		if(count > 3){perror("Num de argumentos erroneo\n");}
 		else{limit_command(argv[1], argv[2]);}
 	} else if (strcmp(argv[0], "set") == 0) {
-		if(count > 3){perror("Num de argumentos erroneo\n");}
-		else{set_command(argv[1], argv[2]);}
+		set_command(argv[1], argv, count);
 	} else if (strcmp(argv[0], "exit") == 0){
 		exit(0);
 	}
