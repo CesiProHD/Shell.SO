@@ -192,7 +192,7 @@ void print_environment_var(char *var) {
 
 void set_environment_var(char *var, char **value, int count) {
 	int i = 2;
-	char *env = malloc(1000);
+	char *env = malloc(100);
 	if(env == NULL){
 		perror("malloc");
 		exit(1);
@@ -201,16 +201,16 @@ void set_environment_var(char *var, char **value, int count) {
 	strcat(env, "=");
 	while(value[i] != NULL){
 		strcat(env, value[i]);
+		if(i != count){strcat(env, " ");}
 		i++;
 	}
-    if (putenv(env) != 0) {perror("putenv"); free(env); exit(1);}
-	free(env);
+    if (putenv(env) != 0) {perror("putenv"); exit(1);}
 }
 
 
 void set_command(char *var, char **value, int count) {
 	if (var == NULL) {print_environment();} 
-    if (var != NULL && count == 1){print_environment_var(var);} 
+    else if (var != NULL && count == 1){print_environment_var(var);} 
 	else if (var != NULL && count > 1){set_environment_var(var, value, count);}
 	else{perror("Llamada invalida");}
 }
