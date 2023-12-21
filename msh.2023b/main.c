@@ -37,43 +37,6 @@ int bgpid = 0;
 
 extern int obtain_order();		/* See parser.y for description */
 
-int contains_metacharacter(char *argv){
-	int i;
-
-	for(i = 0; i<strlen(argv); i++){
-		if((strcmp(argv[i], '$')==0) || (strcmp(argv[i], '~') == 0)){
-			return i;
-		}
-	}
-	return 0;
-}
-
-int contains_metacharacters(char **argv) {
-    int i;
-
-    for (i = 0; argv[i] != NULL; i++) {
-        if(contains_metacharacter(argv[i])){
-			return i;
-		}
-    }
-
-    return 0;
-}
-
-char *expand_metacharacters(char *tira) {
-	char *copia = malloc(strlen(tira)+1);
-
-    if (input[0] == '$') {
-		char *aux = strchr(tira,  "$") + 1;
-		if(strcmp(aux, "mypid") == 0){strcpy(copia, "mypid");}
-		if(strcmp(aux, "bgpid") == 0){strcpy(copia, "bgpid");}
-		if(strcmp(aux, "status") == 0){strcpy(copia, "status");}
-        else {strcpy(copia, getenv(aux));}
-    }
-
-    return copia;
-}
-
 void cd_command(char *path) {
 	
     if (path == NULL) {
@@ -326,7 +289,7 @@ int main(void) {
 	int argvc; /*Contiene el numero de mandatos*/
 	char **argv = NULL;
 	char *filev[3] = { NULL, NULL, NULL };
-	int i, ret, bg, entrada, salida, error, contains;
+	int i, ret, bg, entrada, salida, error;
 	int fd[2];
 	struct sigaction sa;
 	pid_t pid;
