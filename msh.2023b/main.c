@@ -304,10 +304,13 @@ char *expandMetaCaracter(char *tira){
 
 		sscanf(tira_a_cambiar+1, "%[_a-zA-Z0-9]", cambio);
 
-		env = getenv(cambio);
+		if(strcmp(cambio, "status") == 0){env = malloc(sizeof(status)); sprintf(env, "%d", status);}
+		else if(strcmp(cambio, "bgpid") == 0){env = malloc(sizeof(bgpid)); sprintf(env, "%d", bgpid);}
+		else if(strcmp(cambio, "mypid") == 0){pid_t mypid = getpid(); env = malloc(sizeof(mypid)); sprintf(env, "%d", mypid);}
+		else {env = getenv(cambio);}
 		longi = (strlen(tira) - (strlen(cambio)+1) + strlen(env) + 1);
 		copia = malloc(longi*sizeof(char));
-		
+			
 		while(i<longi-1){
 			if (tira[i] == '$') {
 				strcpy(copia+i, env);
@@ -318,6 +321,8 @@ char *expandMetaCaracter(char *tira){
 			}
 		}
 
+		free(env);
+
 	} else if((tira_a_cambiar = strchr(tira, '~')) != NULL){
 
 		struct passwd *pwd;
@@ -325,18 +330,35 @@ char *expandMetaCaracter(char *tira){
 		sscanf(tira_a_cambiar+1, "%[_a-zA-Z0-9]", cambio);
 
 		pwd = getpwnam(cambio);
-		longi = (strlen(tira) - (strlen(cambio)+1) + strlen(pwd->pw_dir) + 1);
-		copia = malloc(longi*sizeof(char));
-		
-		while(i<longi-1){
-			if (tira[i] == '~') {
-				strcpy(copia+i, pwd->pw_dir);
-				i+=(strlen(pwd->pw_dir)+1);
-			} else {
-				copia[i]=tira[i];
-				i++;
+		if(pwd->pw_dir == NULL){
+			env = getenv("HOME");
+			longi = (strlen(tira) - (strlen(cambio)+1) + strlen(env) + 1);
+			copia = malloc(longi*sizeof(char));
+			
+			while(i<longi-1){
+				if (tira[i] == '~') {
+					strcpy(copia+i, env);
+					i+=(strlen(env)+1);
+				} else {
+					copia[i]=tira[i];
+					i++;
+				}
+			}
+		} else {
+			longi = (strlen(tira) - (strlen(cambio)+1) + strlen(pwd->pw_dir) + 1);
+			copia = malloc(longi*sizeof(char));
+			
+			while(i<longi-1){
+				if (tira[i] == '~') {
+					strcpy(copia+i, pwd->pw_dir);
+					i+=(strlen(pwd->pw_dir)+1);
+				} else {
+					copia[i]=tira[i];
+					i++;
+				}
 			}
 		}
+		
 	}
 	return copia;
 }
@@ -390,7 +412,7 @@ int main(void) {
 
 						bgpid = pid;
 
-						if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
+						if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]);}
 
 						/*Posible redireccion*/
 						if(redireccionFicherosEntrada(filev[0]) >=0 && redireccionFicherosSalida(filev[1]) >=0 && redireccionFicherosErr(filev[2]) >= 0){ /*Si hay algun tipo de redireccion*/
@@ -416,7 +438,7 @@ int main(void) {
 
 						if(i == (argvc-1)){ /*Ultimo hijo tiene un tratamiento*/
 
-							if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
+							if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]);}
 							
 							if(esInterno(argv)){
 
@@ -532,7 +554,7 @@ int main(void) {
 
 					argv = argvv[0]; /*Obtencion del mandato*/
 					
-					if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
+					if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]);}
 
 					if(esInterno(argv)){
 
@@ -572,7 +594,7 @@ int main(void) {
 							sigaction(2, &sa, NULL);
 							sigaction(3, &sa, NULL);
 
-							if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
+							if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]);}
 
 							/*Posible redireccion*/
 							if(redireccionFicherosEntrada(filev[0]) >=0 && redireccionFicherosSalida(filev[1]) >=0 && redireccionFicherosErr(filev[2]) >= 0){ /*Si hay algun tipo de redireccion*/
@@ -598,7 +620,7 @@ int main(void) {
 
 						if(i == (argvc-1)){ /*Ultimo hijo tiene un tratamiento*/
 
-							if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
+							if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]);}
 							
 							/*Si es interno no hace falta crear hijo*/
 							if(esInterno(argv)){
@@ -638,7 +660,7 @@ int main(void) {
 									sigaction(2, &sa, NULL);
 									sigaction(3, &sa, NULL);
 
-									if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
+									if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]);}
 								
 									/*Comprobar si hay redireccion de salida*/
 									if(redireccionFicherosSalida(filev[1]) >= 0 && redireccionFicherosErr(filev[2]) >= 0){
@@ -677,7 +699,7 @@ int main(void) {
 								close(fd[1]);
 								close(fd[0]);
 
-								if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
+								if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]);}
 
 								if(i == 0) { /*Primer hijo*/
 
