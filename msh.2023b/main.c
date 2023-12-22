@@ -320,16 +320,18 @@ char *expandMetaCaracter(char *tira){
 
 	} else if((tira_a_cambiar = strchr(tira, '~')) != NULL){
 
+		struct passwd *pwd;
+
 		sscanf(tira_a_cambiar+1, "%[_a-zA-Z0-9]", cambio);
 
-		env = getpwnam(cambio);
-		longi = (strlen(tira) - (strlen(cambio)+1) + strlen(env) + 1);
+		pwd = getpwnam(cambio);
+		longi = (strlen(tira) - (strlen(cambio)+1) + strlen(pwd->pw_dir) + 1);
 		copia = malloc(longi*sizeof(char));
 		
 		while(i<longi-1){
 			if (tira[i] == '~') {
-				strcpy(copia+i, env);
-				i+=(strlen(env)+1);
+				strcpy(copia+i, pwd->pw_dir);
+				i+=(strlen(pwd->pw_dir)+1);
 			} else {
 				copia[i]=tira[i];
 				i++;
@@ -388,6 +390,8 @@ int main(void) {
 
 						bgpid = pid;
 
+						if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
+
 						/*Posible redireccion*/
 						if(redireccionFicherosEntrada(filev[0]) >=0 && redireccionFicherosSalida(filev[1]) >=0 && redireccionFicherosErr(filev[2]) >= 0){ /*Si hay algun tipo de redireccion*/
 							
@@ -411,6 +415,8 @@ int main(void) {
 					for(i = 0; (argv = argvv[i]) != NULL; i++){
 
 						if(i == (argvc-1)){ /*Ultimo hijo tiene un tratamiento*/
+
+							if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
 							
 							if(esInterno(argv)){
 
@@ -485,6 +491,8 @@ int main(void) {
 								close(fd[1]);
 								close(fd[0]);
 
+								if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]);}
+
 								if(i == 0) { /*Primer hijo*/
 
 									/*Si tiene redireccion de entrada o si no*/
@@ -524,9 +532,7 @@ int main(void) {
 
 					argv = argvv[0]; /*Obtencion del mandato*/
 					
-					printf("Antes de comprobar meta caracter\n");
 					if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
-					printf("Despues de comprobar meta caracter\n");
 
 					if(esInterno(argv)){
 
@@ -566,6 +572,8 @@ int main(void) {
 							sigaction(2, &sa, NULL);
 							sigaction(3, &sa, NULL);
 
+							if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
+
 							/*Posible redireccion*/
 							if(redireccionFicherosEntrada(filev[0]) >=0 && redireccionFicherosSalida(filev[1]) >=0 && redireccionFicherosErr(filev[2]) >= 0){ /*Si hay algun tipo de redireccion*/
 								execvp(argv[0], argv);
@@ -589,6 +597,8 @@ int main(void) {
 					for(i = 0; (argv = argvv[i]) != NULL; i++){
 
 						if(i == (argvc-1)){ /*Ultimo hijo tiene un tratamiento*/
+
+							if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
 							
 							/*Si es interno no hace falta crear hijo*/
 							if(esInterno(argv)){
@@ -627,6 +637,8 @@ int main(void) {
 									sa.sa_flags = 0;
 									sigaction(2, &sa, NULL);
 									sigaction(3, &sa, NULL);
+
+									if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
 								
 									/*Comprobar si hay redireccion de salida*/
 									if(redireccionFicherosSalida(filev[1]) >= 0 && redireccionFicherosErr(filev[2]) >= 0){
@@ -664,6 +676,8 @@ int main(void) {
 								dup2(fd[1], 1);
 								close(fd[1]);
 								close(fd[0]);
+
+								if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
 
 								if(i == 0) { /*Primer hijo*/
 
