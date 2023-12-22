@@ -34,7 +34,7 @@
 #define MAX_PATH_LENGTH 100
 
 int status = 0;
-int bgpid = 0;
+pid_t bgpid = 0;
 
 extern int obtain_order();		/* See parser.y for description */
 
@@ -295,19 +295,20 @@ int containsSpecialCharacter(char **array) {
 }
 
 char *expandMetaCaracter(char *tira){
-	char *copia, *tira_a_cambiar, *env;
-	char cambio[1000];
+	char *copia, *tira_a_cambiar, *env, *cambio;
 	int longi = 0;
 	int i = 0;
 
 	if((tira_a_cambiar = strchr(tira, '$')) != NULL){
 
+		cambio = malloc((strlen(tira_a_cambiar)-1)*(sizeof(char)));
 		sscanf(tira_a_cambiar+1, "%[_a-zA-Z0-9]", cambio);
 
 		if(strcmp(cambio, "status") == 0){env = malloc(sizeof(status)); sprintf(env, "%d", status);}
 		else if(strcmp(cambio, "bgpid") == 0){env = malloc(sizeof(bgpid)); sprintf(env, "%d", bgpid);}
 		else if(strcmp(cambio, "mypid") == 0){pid_t mypid = getpid(); env = malloc(sizeof(mypid)); sprintf(env, "%d", mypid);}
 		else {env = getenv(cambio);}
+
 		longi = (strlen(tira) - (strlen(cambio)+1) + strlen(env) + 1);
 		copia = malloc(longi*sizeof(char));
 			
@@ -320,19 +321,14 @@ char *expandMetaCaracter(char *tira){
 				i++;
 			}
 		}
-
-		free(env);
+		if(strcmp(cambio, "status") == 0 || strcmp(cambio, "bgpid") == 0 || strcmp(cambio, "mypid") == 0){free(env);}
+		free(cambio);
 
 	} else if((tira_a_cambiar = strchr(tira, '~')) != NULL){
 
-		struct passwd *pwd;
-
-		sscanf(tira_a_cambiar+1, "%[_a-zA-Z0-9]", cambio);
-
-		pwd = getpwnam(cambio);
-		if(pwd->pw_dir == NULL){
+		if(strlen(tira_a_cambiar) == 1){
 			env = getenv("HOME");
-			longi = (strlen(tira) - (strlen(cambio)+1) + strlen(env) + 1);
+			longi = (strlen(tira) - 2 + strlen(env) + 1);
 			copia = malloc(longi*sizeof(char));
 			
 			while(i<longi-1){
@@ -345,6 +341,13 @@ char *expandMetaCaracter(char *tira){
 				}
 			}
 		} else {
+
+			struct passwd *pwd;
+			
+			cambio = malloc((strlen(tira_a_cambiar)-1)*(sizeof(char)));
+			sscanf(tira_a_cambiar+1, "%[_a-zA-Z0-9]", cambio);
+
+			pwd = getpwnam(cambio);
 			longi = (strlen(tira) - (strlen(cambio)+1) + strlen(pwd->pw_dir) + 1);
 			copia = malloc(longi*sizeof(char));
 			
@@ -357,8 +360,9 @@ char *expandMetaCaracter(char *tira){
 					i++;
 				}
 			}
-		}
-		
+
+			free(cambio);
+		}	
 	}
 	return copia;
 }
@@ -405,12 +409,12 @@ int main(void) {
 
 					pid = fork(); /*Creacion de hijo*/
 
+					bgpid = pid;
+
 					if(pid == -1){perror("fork"); exit(1);} /*Error en la creacion del hijo*/
 
 					/*Gestion del hijo*/
 					else if(pid == 0){
-
-						bgpid = pid;
 
 						if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]);}
 
