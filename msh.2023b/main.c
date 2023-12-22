@@ -29,6 +29,7 @@
 #include <signal.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+#include <pwd.h>
 
 #define MAX_PATH_LENGTH 100
 
@@ -284,12 +285,66 @@ int redireccionFicherosErr(const char *filev){
 	return fd;
 }
 
+int containsSpecialCharacter(char **array) {
+    for (int i = 0; array[i]!=NULL; i++) {
+        if (strchr(array[i], '$') || strchr(array[i], '~')) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+char *expandMetaCaracter(char *tira){
+	char *copia, *tira_a_cambiar, *env;
+	char cambio[1000];
+	int longi = 0;
+	int i = 0;
+
+	if((tira_a_cambiar = strchr(tira, '$')) != NULL){
+
+		sscanf(tira_a_cambiar+1, "%[_a-zA-Z0-9]", cambio);
+
+		env = getenv(cambio);
+		longi = (strlen(tira) - (strlen(cambio)+1) + strlen(env) + 1);
+		copia = malloc(longi*sizeof(char));
+		
+		while(i<longi-1){
+			if (tira[i] == '$') {
+				strcpy(copia+i, env);
+				i+=(strlen(env)+1);
+			} else {
+				copia[i]=tira[i];
+				i++;
+			}
+		}
+
+	} else if((tira_a_cambiar = strchr(tira, '~')) != NULL){
+
+		sscanf(tira_a_cambiar+1, "%[_a-zA-Z0-9]", cambio);
+
+		env = getpwnam(cambio);
+		longi = (strlen(tira) - (strlen(cambio)+1) + strlen(env) + 1);
+		copia = malloc(longi*sizeof(char));
+		
+		while(i<longi-1){
+			if (tira[i] == '~') {
+				strcpy(copia+i, env);
+				i+=(strlen(env)+1);
+			} else {
+				copia[i]=tira[i];
+				i++;
+			}
+		}
+	}
+	return copia;
+}
+
 int main(void) {
 	char ***argvv = NULL;
 	int argvc; /*Contiene el numero de mandatos*/
 	char **argv = NULL;
 	char *filev[3] = { NULL, NULL, NULL };
-	int i, ret, bg, entrada, salida, error;
+	int i, ret, bg, entrada, salida, error, pos;
 	int fd[2];
 	struct sigaction sa;
 	pid_t pid;
@@ -315,6 +370,8 @@ int main(void) {
  * PARA DAR UNA IDEA DE COMO UTILIZAR LAS ESTRUCTURAS
  * argvv Y filev. ESTAS LINEAS DEBERAN SER ELIMINADAS.
  */      	
+		
+		pos = 0;
 
 			if(bg){ /*Si es background*/
 
@@ -466,6 +523,10 @@ int main(void) {
 				if(argvc == 1){ /*Un solo argumento*/
 
 					argv = argvv[0]; /*Obtencion del mandato*/
+					
+					printf("Antes de comprobar meta caracter\n");
+					if((pos = containsSpecialCharacter(argv))){argv[pos] = expandMetaCaracter(argv[pos]); printf("%s\n", argv[pos]);}
+					printf("Despues de comprobar meta caracter\n");
 
 					if(esInterno(argv)){
 
@@ -490,8 +551,7 @@ int main(void) {
 						close(entrada);
 						close(error);
 						
-					}
-					else{ /*No es inteno*/
+					} else{ /*No es inteno*/
 
 						pid = fork(); /*Creacion de hijo*/
 
